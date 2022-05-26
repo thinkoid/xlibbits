@@ -4,30 +4,29 @@
 #include <stdlib.h>
 #include <X11/Xlib.h>
 
-#define UNUSED(x) ((void)(x))
-
-static Display *
-open_display(const char *s)
+int main(void)
 {
-        Display *dpy = XOpenDisplay(s);
+        int screen;
+        Visual *visual;
 
+        Display *dpy = XOpenDisplay(0);
         if (0 == dpy) {
-                fprintf(stderr, "display open failed (%s)\n", s && s[0] ? s : "null");
-        }
-
-        return dpy;
-}
-
-int main(int argc, char **argv)
-{
-        Display *dpy;
-
-        UNUSED(argc);
-
-        if (0 == (dpy = open_display(argv[1])) ||
-            0 == (dpy = open_display(getenv("DISPLAY")))) {
+                fprintf(stderr, "XOpenDisplay failed\n");
                 exit(1);
         }
+
+        screen = DefaultScreen(dpy);
+
+        printf(" --> default screen : %d\n", screen);
+        printf(" --> root window    : %ld\n", RootWindow(dpy, screen));
+
+        printf(" --> dimensions     : %d x %d (depth : %d)\n",
+               DisplayWidth(dpy, screen),
+               DisplayHeight(dpy, screen),
+               DefaultDepth(dpy, screen));
+
+        visual = DefaultVisual(dpy, screen);
+        printf(" --> bits per rgb   : %d\n", visual->bits_per_rgb);
 
         XCloseDisplay(dpy);
 

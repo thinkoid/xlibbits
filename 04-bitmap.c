@@ -12,7 +12,13 @@
 #define STB_IMAGE_IMPLEMENTATION 1
 #include <stb/stb_image.h>
 
-#define UNUSED(x) ((void)(x))
+#define UNUSED(x) ((void)x)
+
+struct drw
+{
+        Window win;
+        GC gc;
+};
 
 struct img
 {
@@ -34,7 +40,7 @@ make_window(Display *dpy)
 
         XMapWindow(dpy, win);
         XFlush(dpy);
-        
+
         return win;
 }
 
@@ -72,22 +78,35 @@ make_gc(Display *dpy, Window win, int reverse)
         return gc;
 }
 
-static int
-load_image(struct img *img, const char *s)
+static struct img *
+load_image(const char *s)
 {
         int ignore;
+        struct img *img;
+
+        if (0 == s || 0 == s[0]) {
+                fprintf(stderr, "invalid filename\n");
+                return 0;
+        }
+
+        img = malloc(sizeof *img);
+        if (0 == img) {
+                fprintf(stderr, "image allocation failed\n");
+                return 0;
+        }
 
         img->buf = stbi_load(s, &img->w, &img->h, &ignore, 1);
         if (0 == img->buf) {
                 fprintf(stderr, "read image %s failed\n", s);
-                return 1;
+                free(img);
+                return 0;
         }
 
-        return 0;
+        return img;
 }
 
 static void
-draw_image(Display *dpy, Window win, GC gc, const struct img *img)
+draw_image(Display *dpy, struct drw *drw, const struct img *img)
 {
         int i, j;
         unsigned char *src = img->buf;
@@ -95,16 +114,16 @@ draw_image(Display *dpy, Window win, GC gc, const struct img *img)
         for (i = 0; i < img->h; ++i) {
                 for (j = 0; j < img->w; ++j) {
                         if (0 == src[i * img->w + j])
-                                XDrawPoint(dpy, win, gc, j + 100, i + 100);
+                                XDrawPoint(dpy, drw->win, drw->gc, j + 100, i + 100);
                 }
         }
 }
 
 static void
-event_loop(Display *dpy, Window win, GC gc, const struct img *img)
+event_loop(Display *dpy, struct drw *drw, const struct img *img)
 {
         int running = 1;
-        
+
         XEvent any;
         XKeyEvent *key;
 
@@ -117,7 +136,7 @@ event_loop(Display *dpy, Window win, GC gc, const struct img *img)
                         break;
 
                 case Expose:
-                        draw_image(dpy, win, gc, img);
+                        draw_image(dpy, drw, img);
                         break;
                 }
         }
@@ -125,48 +144,87 @@ event_loop(Display *dpy, Window win, GC gc, const struct img *img)
         XSync(dpy, 1);
 }
 
-int main(int argc, char **argv)
+static Display *
+make_display()
 {
         Display *dpy;
-
-        Window win;
-        GC gc;
-
-        struct img img;
-
-        if (1 == argc || 0 == argv[1] || 0 == argv[1][0]) {
-                printf("usage: program filename\n");
-                exit(2);
-        }
-
-        if (load_image(&img, argv[1]))
-                exit(1);
 
         dpy = XOpenDisplay(0);
         if (0 == dpy) {
                 fprintf(stderr, "XOpenDisplay failed\n");
-                goto b;
+                return 0;
         }
 
-        win = make_window(dpy);
-        XSelectInput(dpy, win, KeyPressMask | ExposureMask | StructureNotifyMask);
+        return dpy;
+}
 
-        gc = make_gc(dpy, win, 0);
-        if (0 == gc)
+static struct drw *
+make_drawable(Display *dpy)
+{
+        struct drw *drw;
+
+        drw = malloc(sizeof *drw);
+        if (0 == drw) {
+                fprintf(stderr, "drawable allocation failed\n");
                 goto a;
+        }
 
-        draw_image(dpy, win, gc, &img);
-        event_loop(dpy, win, gc, &img);
-        
-        XFreeGC(dpy, gc);
-a:
-        XUnmapWindow(dpy, win);
-        XDestroyWindow(dpy, win);
+        drw->win = make_window(dpy);
+        XSelectInput(dpy, drw->win, 0
+                     | KeyPressMask
+                     | ExposureMask
+                     | StructureNotifyMask);
 
-        XCloseDisplay(dpy);
+        drw->gc = make_gc(dpy, drw->win, 0);
+        if (0 == drw->gc)
+                goto b;
+
+        return drw;
+
 b:
-        free(img.buf);
-        
+        XUnmapWindow(dpy, drw->win);
+        XDestroyWindow(dpy, drw->win);
+
+        free(drw);
+a:
         return 0;
 }
 
+int main(int argc, char **argv)
+{
+        Display *dpy;
+
+        struct drw *drw;
+        struct img *img;
+
+        UNUSED(argc);
+
+        img = load_image(argv[1]);
+        if (0 == img)
+                exit(1);
+
+        dpy = make_display();
+        if (0 == dpy)
+                goto a;
+
+        drw = make_drawable(dpy);
+        if (0 == drw)
+                goto b;
+
+        draw_image(dpy, drw, img);
+        event_loop(dpy, drw, img);
+
+        XFreeGC(dpy, drw->gc);
+
+        XUnmapWindow(dpy, drw->win);
+        XDestroyWindow(dpy, drw->win);
+
+        free(drw);
+b:
+        XCloseDisplay(dpy);
+a:
+        free(img->buf);
+        free(img);
+
+        return 0;
+}

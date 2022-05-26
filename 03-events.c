@@ -8,25 +8,23 @@
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 
-#define UNUSED(x) ((void)(x))
-
-#define SCR(dpy) DefaultScreen(dpy)
-#define ROOT(dpy) RootWindow(dpy, SCR(dpy))
-
-#define BLACK(dpy) BlackPixel(dpy, SCR(dpy))
-#define WHITE(dpy) WhitePixel(dpy, SCR(dpy))
-
 static Window
 make_window(Display *dpy)
 {
+        int screen;
         Window win;
 
+        screen = DefaultScreen(dpy);
+
         win = XCreateSimpleWindow(
-                dpy, ROOT(dpy), 0, 0, 640, 480, 1, BLACK(dpy), WHITE(dpy));
+                dpy, RootWindow(dpy, screen),
+                0, 0, 640, 480, 1,
+                BlackPixel(dpy, screen),
+                XWhitePixel(dpy, screen));
 
         XMapWindow(dpy, win);
         XFlush(dpy);
-        
+
         return win;
 }
 
@@ -75,7 +73,8 @@ static const char *event_desc(size_t type)
             ? arr[type] : "invalid event type";
 }
 
-static void process_events_of(Display *dpy)
+static void
+event_loop_of(Display *dpy)
 {
         XEvent any;
         XKeyEvent *key;
@@ -94,35 +93,31 @@ static void process_events_of(Display *dpy)
         XSync(dpy, 1);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
         Display *dpy;
         Window win;
 
-        UNUSED(argc);
-
-        dpy = XOpenDisplay(argv[1]);
+        dpy = XOpenDisplay(0);
         if (0 == dpy) {
-                fprintf(stderr, "XOpenDisplay(%s) failed\n",
-                        argv[1] ? argv[1] : "null");
+                fprintf(stderr, "XOpenDisplay failed\n");
                 exit(1);
         }
 
         win = make_window(dpy);
 
-        /* select what events we wish to see */
         XSelectInput(dpy, win, 0
                      | ExposureMask
                      | KeyPressMask
                      | ButtonPressMask
                      | StructureNotifyMask);
 
-        process_events_of(dpy);
+        event_loop_of(dpy);
 
         XUnmapWindow(dpy, win);
         XDestroyWindow(dpy, win);
-        
+
         XCloseDisplay(dpy);
-        
+
         return 0;
 }

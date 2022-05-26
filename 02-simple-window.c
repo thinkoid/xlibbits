@@ -5,34 +5,29 @@
 #include <unistd.h>
 #include <X11/Xlib.h>
 
-#define UNUSED(x) ((void)(x))
-
-int main(int argc, char **argv)
+int main()
 {
-        int scr;
-        
+        int screen;
+
         Display *dpy;
         Window win;
-        
-        UNUSED(argc);
 
-        dpy = XOpenDisplay(argv[1]);
+        dpy = XOpenDisplay(0);
         if (0 == dpy) {
-                fprintf(stderr, "XOpenDisplay(%s) failed\n",
-                        argv[1] ? argv[1] : "null");
+                fprintf(stderr, "XOpenDisplay failed\n");
                 exit(1);
         }
 
-        scr = DefaultScreen(dpy);
+        screen = DefaultScreen(dpy);
 
         win = XCreateSimpleWindow(
-                dpy, RootWindow(dpy, scr),
+                dpy, RootWindow(dpy, screen),
                 /*
                  * position, width, height, border width, will likely be
                  * changed by the window manager
                  */
                 0, 0, 640, 480, 1,
-                BlackPixel(dpy, scr), WhitePixel(dpy, scr));
+                BlackPixel(dpy, screen), WhitePixel(dpy, screen));
 
         XMapWindow(dpy, win);
         XFlush(dpy);
@@ -40,6 +35,6 @@ int main(int argc, char **argv)
         sleep(3);
 
         XCloseDisplay(dpy);
-        
+
         return 0;
 }
