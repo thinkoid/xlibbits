@@ -34,7 +34,7 @@ $(DEPENDDIR):
 	$(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ -c $<
 
 %: %.o
-	$(CC) $(LDFLAGS) -o $@ $^ -lX11
+	$(CC) $(LDFLAGS) -o $@ $^ -lX11 -lm
 
 clean:
 	@rm -rf $(TARGETS) $(OBJS)
