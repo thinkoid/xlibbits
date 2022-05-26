@@ -32,3 +32,4 @@
 *.app
 /empty
 /01-display
+/02-gc
