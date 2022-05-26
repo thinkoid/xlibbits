@@ -145,7 +145,7 @@ int main(int argc, char **argv)
         dpy = XOpenDisplay(0);
         if (0 == dpy) {
                 fprintf(stderr, "XOpenDisplay failed\n");
-                exit(1);
+                goto b;
         }
 
         win = make_window(dpy);
@@ -153,23 +153,20 @@ int main(int argc, char **argv)
 
         gc = make_gc(dpy, win, 0);
         if (0 == gc)
-                goto end;
+                goto a;
 
         draw_image(dpy, win, gc, &img);
         event_loop(dpy, win, gc, &img);
         
-end:
-        if (img.buf)
-                free(img.buf);
-        
-        if (gc)
-                XFreeGC(dpy, gc);
-
+        XFreeGC(dpy, gc);
+a:
         XUnmapWindow(dpy, win);
         XDestroyWindow(dpy, win);
 
         XCloseDisplay(dpy);
-
+b:
+        free(img.buf);
+        
         return 0;
 }
 
