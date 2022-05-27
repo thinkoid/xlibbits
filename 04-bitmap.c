@@ -192,6 +192,8 @@ a:
 
 int main(int argc, char **argv)
 {
+        int ret = 0;
+
         Display *dpy;
 
         struct drw *drw;
@@ -204,12 +206,16 @@ int main(int argc, char **argv)
                 exit(1);
 
         dpy = make_display();
-        if (0 == dpy)
+        if (0 == dpy) {
+                ret = 1;
                 goto a;
+        }
 
         drw = make_drawable(dpy);
-        if (0 == drw)
+        if (0 == drw) {
+                ret = 1;
                 goto b;
+        }
 
         draw_image(dpy, drw, img);
         event_loop(dpy, drw, img);
@@ -226,5 +232,5 @@ a:
         free(img->buf);
         free(img);
 
-        return 0;
+        return ret;
 }
