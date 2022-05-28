@@ -6,7 +6,7 @@ WARNINGS = -W -Wall -Werror -Wno-deprecated-declarations
 
 CFLAGS = -g -O -ansi -pedantic $(WARNINGS)
 
-CPPFLAGS = -I.
+CPPFLAGS = -I. -I/usr/include/freetype2
 LDFLAGS =
 
 DEPENDDIR = ./.deps
@@ -35,6 +35,12 @@ $(DEPENDDIR):
 
 %: %.o
 	$(CC) $(LDFLAGS) -o $@ $^ -lX11 -lm
+
+05-font.o: 05-font.c
+	$(CC) -c $(CPPFLAGS) -I/usr/include/freetype2 $(CFLAGS) -o $@ -c $<
+
+05-font: 05-font.o
+	$(CC) $(LDFLAGS) -o $@ $^ -lXft -lX11
 
 clean:
 	@rm -rf $(TARGETS) $(OBJS)
